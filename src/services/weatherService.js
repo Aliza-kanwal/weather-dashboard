@@ -143,7 +143,8 @@ const getWeatherIcon = (condition) => {
   };
   return icons[condition] || '☁️';
 };
-// Add this new function to process hourly forecast
+
+// Process hourly forecast (next 24 hours)
 export const processHourlyForecast = (forecastData) => {
   if (!forecastData || !forecastData.list) return [];
   
@@ -157,7 +158,7 @@ export const processHourlyForecast = (forecastData) => {
     icon: getWeatherIcon(item.weather[0].main),
     condition: item.weather[0].main,
     description: item.weather[0].description,
-    pop: Math.round(item.pop * 100)
+    pop: Math.round(item.pop * 100) // probability of precipitation
   }));
   
   return hourlyData;
