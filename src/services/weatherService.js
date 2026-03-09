@@ -20,34 +20,15 @@ export const fetchWeatherByCity = async (city) => {
 };
 
 // Fetch 5-day forecast (we'll use 3 days)
-// Fix for fetchForecastByCity - REMOVE the cnt parameter completely
+// Change from cnt:3 to cnt:40 (5 days * 8 forecasts per day)
 export const fetchForecastByCity = async (city) => {
   try {
     const response = await axios.get(`${BASE_URL}/forecast`, {
       params: {
         q: city,
         appid: API_KEY,
-        units: 'metric'
-        // REMOVE cnt parameter - let API return full 5 days (40 items)
-      }
-    });
-    console.log("API Response:", response.data); // Add this to debug
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Same for coordinates
-export const fetchForecastByCoords = async (lat, lon) => {
-  try {
-    const response = await axios.get(`${BASE_URL}/forecast`, {
-      params: {
-        lat: lat,
-        lon: lon,
-        appid: API_KEY,
-        units: 'metric'
-        // REMOVE cnt parameter
+        units: 'metric',
+        cnt: 40  // Changed from 3 to 40 to get 5 days of data
       }
     });
     return response.data;
@@ -73,83 +54,78 @@ export const fetchWeatherByCoords = async (lat, lon) => {
   }
 };
 
+// Fetch forecast by coordinates
+export const fetchForecastByCoords = async (lat, lon) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/forecast`, {
+      params: {
+        lat: lat,
+        lon: lon,
+        appid: API_KEY,
+        units: 'metric',
+        cnt: 40  // Changed from 3 to 40
+      }
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
 
-// Helper to process forecast data
 export const processForecastData = (forecastData) => {
-  console.log("Processing forecast. Full data:", forecastData);
+  console.log("=== DEBUG: processForecastData ===");
   
-  if (!forecastData || !forecastData.list || forecastData.list.length === 0) {
-    console.log("No forecast data");
+  if (!forecastData || !forecastData.list) {
+    console.log("❌ No forecast data available");
     return [];
   }
   
-  console.log(`Received ${forecastData.list.length} forecast items`);
+  console.log(`📊 Received ${forecastData.list.length} forecast items`);
   
-  // Group by day
-  const daysMap = new Map();
+  const dailyForecasts = [];
+  const seenDates = new Set();
   
+  // Process all items to get 3 unique days
   forecastData.list.forEach(item => {
-    const date = new Date(item.dt * 1000);
-    const dayKey = date.toLocaleDateString('en-US', { weekday: 'short' });
-    const fullDate = date.toLocaleDateString();
+    const forecastDate = new Date(item.dt * 1000);
+    const dateStr = forecastDate.toLocaleDateString();
     
-    if (!daysMap.has(fullDate)) {
-      daysMap.set(fullDate, {
-        day: dayKey,
-        date: fullDate,
-        items: [],
-        temps: [],
-        icons: [],
-        conditions: []
+    // Only take up to 3 days
+    if (!seenDates.has(dateStr) && dailyForecasts.length < 3) {
+      seenDates.add(dateStr);
+      
+      // Find all items for this day to calculate min/max
+      const dayItems = forecastData.list.filter(i => {
+        const iDate = new Date(i.dt * 1000);
+        return iDate.toLocaleDateString() === dateStr;
+      });
+      
+      const temps = dayItems.map(i => i.main.temp);
+      const minTemp = Math.min(...temps);
+      const maxTemp = Math.max(...temps);
+      
+      // Use midday forecast (around 12:00) for main display
+      const middayItem = dayItems.find(i => {
+        const hour = new Date(i.dt * 1000).getHours();
+        return hour >= 11 && hour <= 14;
+      }) || dayItems[0]; // fallback to first if no midday
+      
+      dailyForecasts.push({
+        day: forecastDate.toLocaleDateString('en-US', { weekday: 'short' }),
+        date: forecastDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        temp: Math.round(middayItem.main.temp),
+        minTemp: Math.round(minTemp),
+        maxTemp: Math.round(maxTemp),
+        icon: getWeatherIcon(middayItem.weather[0].main),
+        condition: middayItem.weather[0].main,
+        description: middayItem.weather[0].description,
+        humidity: middayItem.main.humidity,
+        wind: Math.round(middayItem.wind.speed)
       });
     }
-    
-    const dayData = daysMap.get(fullDate);
-    dayData.items.push(item);
-    dayData.temps.push(item.main.temp);
-    dayData.icons.push(item.weather[0].icon);
-    dayData.conditions.push(item.weather[0].main);
   });
   
-  // Convert map to array and take first 3 days
-  const dailyForecasts = [];
-  let dayCount = 0;
-  
-  for (const [_, dayData] of daysMap) {
-    if (dayCount >= 3) break;
-    
-    const avgTemp = Math.round(
-      dayData.temps.reduce((a, b) => a + b, 0) / dayData.temps.length
-    );
-    const minTemp = Math.round(Math.min(...dayData.temps));
-    const maxTemp = Math.round(Math.max(...dayData.temps));
-    
-    // Get most common condition
-    const modeCondition = dayData.conditions.sort((a,b) =>
-      dayData.conditions.filter(v => v === a).length - dayData.conditions.filter(v => v === b).length
-    ).pop();
-    
-    dailyForecasts.push({
-      day: dayData.day,
-      date: dayData.date,
-      temp: avgTemp,
-      minTemp: minTemp,
-      maxTemp: maxTemp,
-      icon: getWeatherIcon(modeCondition),
-      condition: modeCondition,
-      description: dayData.items[0].weather[0].description,
-      humidity: Math.round(
-        dayData.items.reduce((a, b) => a + b.main.humidity, 0) / dayData.items.length
-      ),
-      wind: Math.round(
-        dayData.items.reduce((a, b) => a + b.wind.speed, 0) / dayData.items.length
-      )
-    });
-    
-    dayCount++;
-  }
-  
-  console.log("Processed 3-day forecast:", dailyForecasts);
+  console.log("✅ Processed forecast (3 days):", dailyForecasts);
   return dailyForecasts;
 };
 
@@ -171,27 +147,18 @@ const getWeatherIcon = (condition) => {
 export const processHourlyForecast = (forecastData) => {
   if (!forecastData || !forecastData.list) return [];
   
-  console.log("Processing hourly. Total items:", forecastData.list.length);
-  
   // Get next 8 items (24 hours, 3-hour intervals)
-  const hourlyData = forecastData.list.slice(0, 8).map(item => {
-    const date = new Date(item.dt * 1000);
-    return {
-      time: date.toLocaleTimeString('en-US', { 
-        hour: 'numeric',
-        hour12: true 
-      }),
-      temp: Math.round(item.main.temp),
-      icon: getWeatherIcon(item.weather[0].main),
-      condition: item.weather[0].main,
-      description: item.weather[0].description,
-      humidity: item.main.humidity,
-      wind: Math.round(item.wind.speed),
-      pop: Math.round(item.pop * 100)
-    };
-  });
+  const hourlyData = forecastData.list.slice(0, 8).map(item => ({
+    time: new Date(item.dt * 1000).toLocaleTimeString('en-US', { 
+      hour: 'numeric',
+      hour12: true 
+    }),
+    temp: Math.round(item.main.temp),
+    icon: getWeatherIcon(item.weather[0].main),
+    condition: item.weather[0].main,
+    description: item.weather[0].description,
+    pop: Math.round(item.pop * 100)
+  }));
   
-  console.log("Processed hourly (8 items):", hourlyData);
   return hourlyData;
-};
 };
