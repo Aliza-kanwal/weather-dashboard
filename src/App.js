@@ -11,7 +11,6 @@ import {
   fetchForecastByCoords,
   processForecastData,
   processHourlyForecast,
-  fetchAirQuality
 } from './services/weatherService';
 
 function App() {
