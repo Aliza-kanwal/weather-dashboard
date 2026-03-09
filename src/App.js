@@ -26,19 +26,24 @@ const [coordinates, setCoordinates] = useState(null);
   setError('');
   
   try {
+    console.log("🔍 Searching for:", city);
+    
     const weatherData = await fetchWeatherByCity(city);
+    console.log("✅ Weather data received:", weatherData);
+    
     const forecastData = await fetchForecastByCity(city);
-      console.log("Forecast Data:", forecastData);
+    console.log("✅ Forecast data received:", forecastData);
+    console.log("📊 Forecast list length:", forecastData.list?.length);
     
     setWeather(weatherData);
-    setForecast(processForecastData(forecastData));
-    setHourlyForecast(processHourlyForecast(forecastData));
-    setCoordinates({
-      lat: weatherData.coord.lat,
-      lon: weatherData.coord.lon
-    });
+    
+    const processedForecast = processForecastData(forecastData);
+    console.log("🎯 Processed forecast (should be 3 days):", processedForecast);
+    
+    setForecast(processedForecast);
     setLoading(false);
   } catch (err) {
+    console.error("❌ Error:", err);
     setError('City not found. Please try again.');
     setLoading(false);
   }
