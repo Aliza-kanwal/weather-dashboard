@@ -20,7 +20,7 @@ function SearchBar({ onSearch, loading }) {
             value={city}
             onChange={(e) => setCity(e.target.value)}
             placeholder="Enter city name (e.g., London, Tokyo, New York)"
-            className="w-full px-5 py-4 bg-white/90 backdrop-blur-sm text-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 shadow-lg placeholder-gray-400"
+            className="w-full px-5 py-4 pl-10 bg-white/90 backdrop-blur-sm text-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 shadow-lg placeholder-gray-400"
             disabled={loading}
           />
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
