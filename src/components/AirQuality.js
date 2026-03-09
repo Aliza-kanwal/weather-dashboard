@@ -1,24 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { fetchAirQuality, getAQILevel, getAQIDescription } from '../services/airQualityService';
 
 function AirQuality({ lat, lon }) {
   const [airQuality, setAirQuality] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (lat && lon) {
-      loadAirQuality();
-    }
-  }, [lat, lon]);
-
-  const loadAirQuality = async () => {
+  // Wrap loadAirQuality with useCallback to prevent unnecessary re-renders
+  const loadAirQuality = useCallback(async () => {
     setLoading(true);
     const data = await fetchAirQuality(lat, lon);
     if (data && data.list && data.list[0]) {
       setAirQuality(data.list[0]);
     }
     setLoading(false);
-  };
+  }, [lat, lon]); // Add lat, lon as dependencies since they're used inside
+
+  useEffect(() => {
+    if (lat && lon) {
+      loadAirQuality();
+    }
+  }, [lat, lon, loadAirQuality]); // Add loadAirQuality to dependency array
 
   if (loading) {
     return (
