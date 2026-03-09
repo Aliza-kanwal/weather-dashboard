@@ -10,7 +10,7 @@ import {
   fetchWeatherByCoords,
   fetchForecastByCoords,
   processForecastData,
-  processHourlyForecast,
+  processHourlyForecast
 } from './services/weatherService';
 
 function App() {
