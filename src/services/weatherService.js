@@ -21,6 +21,22 @@ export const fetchWeatherByCity = async (city) => {
 
 // Fetch 5-day forecast (we'll use 3 days)
 // Change from cnt:3 to cnt:40 (5 days * 8 forecasts per day)
+// Add this function to weatherService.js
+export const fetchAirQuality = async (lat, lon) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/air_pollution`, {
+      params: {
+        lat: lat,
+        lon: lon,
+        appid: API_KEY
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching air quality:", error);
+    throw error;
+  }
+};
 export const fetchForecastByCity = async (city) => {
   try {
     const response = await axios.get(`${BASE_URL}/forecast`, {
